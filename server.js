@@ -24,8 +24,11 @@ function start() {
             choices: [
                 'View all employees',
                 'Add employee',
+                'Update employee',
+                'Update employee manager',
                 'View all departments',
                 'Add department',
+                'Search by manager',
                 'View roles',
                 'Add roles',
                 'Exit',
@@ -41,11 +44,23 @@ function start() {
                     })
                     break;
 
+                case 'Update employee':
+                    updateEmployeeRole();
+                    break;
+
                 case 'View all departments':
                     departmentDB.getAllDepartments().then((depResults) => {
                         console.table(depResults);
                         start();
                     })
+                    break;
+
+                case 'Update employee manager':
+                    updateEmployeeManager();
+                    break;
+
+                case 'Search by manager':
+                    searchByManager();
                     break;
 
                 case 'Add department':
@@ -79,34 +94,11 @@ function start() {
         });
 }
 
-// const artistSearch = () => {
-//     inquirer
-//       .prompt({
-//         name: 'artist',
-//         type: 'input',
-//         message: 'What artist would you like to search for?',
-//       })
-//       .then((answer) => {
-//         const query = 'SELECT position, song, year FROM top5000 WHERE ?';
-//         connection.query(query, { artist: answer.artist }, (err, res) => {
-//           if (err) throw err;
-//           res.forEach(({ position, song, year }) => {
-//             console.log(
-//               `Position: ${position} || Song: ${song} || Year: ${year}`
-//             );
-//           });
-//           runSearch();
-//         });
-//       });
-//   };
-
 function employee() {
     connection.query('SELECT * FROM roles', (err, results) => {
         connection.query('SELECT * FROM managers', (errr, results2) => {
             if (err) throw err;
             if (errr) throw err;
-
-            console.log(results2);
             inquirer
                 .prompt([
                     {
@@ -141,15 +133,11 @@ function employee() {
                         message: 'Who is this employees manager?',
                         name: 'manager',
                         choices() {
-                            const choiceArray = [];
+                            const choiceArray2 = [];
                             results2.forEach(({ first_name }) => {
-                                if (manager === undefined) {
-                                    return 0;
-                                } else {
-                                    choiceArray.push(first_name);
-                                }
+                                choiceArray2.push(first_name);
                             });
-                            return choiceArray;
+                            return choiceArray2;
                         },
                     }
                 ])
@@ -181,30 +169,180 @@ function employee() {
     })
 }
 
-function role() {
-    inquirer
-        .prompt([
-            {
-                type: 'input',
-                message: 'What role would you like to add?',
-                name: 'title',
-            },
-            {
-                type: 'input',
-                message: 'What is the salary for this role?',
-                name: 'salary',
-            }
-        ])
-        .then((answer) => {
-            roleDB.addRole(answer.title, answer.salary).then((roleResults) => {
-                roleDB.getAllRoles().then((roleResults) => {
-                    console.log("Successfully added role!!")
-                    console.table(roleResults);
-                    start();
-                })
+function updateEmployeeRole() {
+    connection.query('SELECT * FROM employee', (err, results) => {
+        connection.query('SELECT * FROM roles', (errr, results1) => {
 
-            })
+            if (err) throw err;
+            if (errr) throw errr;
+
+            inquirer
+                .prompt([
+                    {
+                        type: 'list',
+                        message: 'What employee would you like to update?',
+                        name: 'employee',
+                        choices() {
+                            const choiceArray = [];
+                            results.forEach(({ first_name }) => {
+                                choiceArray.push(first_name);
+                            });
+                            return choiceArray;
+                        },
+                    },
+                    {
+                        type: 'list',
+                        message: 'What is the role for this employee?',
+                        name: 'role',
+                        choices() {
+                            const choiceArray2 = [];
+                            results1.forEach(({ title }) => {
+                                choiceArray2.push(title);
+                            });
+                            return choiceArray2;
+                        },
+                    }
+                ])
+                .then(({ employee, role }) => {
+                    const filteredRoleType = results1.filter(value => value.title === role)[0].id
+
+                    employeeDB.updateRole(filteredRoleType, employee).then((roleResults) => {
+                        employeeDB.getAllEmployees().then((employeeResults) => {
+                            console.log("Successfully added role!!")
+                            console.table(employeeResults);
+                            start();
+                        })
+
+                    })
+                })
         })
+    })
+}
+
+function updateEmployeeManager() {
+    connection.query('SELECT * FROM employee', (err, results) => {
+        connection.query('SELECT * FROM managers', (errr, results1) => {
+
+            if (err) throw err;
+            if (errr) throw errr;
+
+            inquirer
+                .prompt([
+                    {
+                        type: 'list',
+                        message: 'What employee would you like to update?',
+                        name: 'employee',
+                        choices() {
+                            const choiceArray = [];
+                            results.forEach(({ first_name }) => {
+                                choiceArray.push(first_name);
+                            });
+                            return choiceArray;
+                        },
+                    },
+                    {
+                        type: 'list',
+                        message: 'What is the new manager of this employee?',
+                        name: 'manager',
+                        choices() {
+                            const choiceArray2 = [];
+                            results1.forEach(({ first_name }) => {
+                                choiceArray2.push(first_name);
+                            });
+                            return choiceArray2;
+                        },
+                    }
+                ])
+                .then(({ employee, manager }) => {
+                    const filteredRoleType = results1.filter(value => value.first_name === manager)[0].id
+                    employeeDB.updateManager(filteredRoleType, employee).then((roleResults) => {
+                        employeeDB.getAllEmployees().then((employeeResults) => {
+                            console.log("Successfully added role!!")
+                            console.table(employeeResults);
+                            start();
+                        })
+
+                    })
+                })
+        })
+    })
+}
+
+const searchByManager = () => {
+    connection.query('SELECT * FROM managers', (err, results) => {
+        if (err) throw err;
+
+        inquirer
+            .prompt({
+                name: 'managers',
+                type: 'list',
+                message: 'What manager would you like by?',
+                choices() {
+                    const choiceArray = [];
+                    results.forEach(({ first_name }) => {
+                        choiceArray.push(first_name);
+                    });
+                    return choiceArray;
+                },
+            })
+            .then(({ managers }) => {
+                const filteredRoleType = results.filter(value => value.first_name === managers)[0].id
+                const query = 'SELECT id, first_name, last_name, role_id FROM employee WHERE ?;';
+                connection.query(query,  filteredRoleType , (err, res) => {
+                    if (err) throw err;
+                    const arrayOfManagers = res.map(({ id, first_name, last_name, role_id }) => {
+                        return { id, first_name, last_name, role_id }
+                    });
+                    console.table(arrayOfManagers);
+                    start();
+                });
+            });
+    })
+};
+////////////////////////////////this is not done
+
+function role() {
+    connection.query('SELECT * FROM department', (err, results3) => {
+        if (err) throw err;
+
+        inquirer
+            .prompt([
+                {
+                    type: 'input',
+                    message: 'What role would you like to add?',
+                    name: 'title',
+                },
+                {
+                    type: 'input',
+                    message: 'What is the salary for this role?',
+                    name: 'salary',
+                },
+                {
+                    type: 'list',
+                    message: 'What department is this roles in?',
+                    name: 'departmentName',
+                    choices() {
+                        const choiceArray3 = [];
+                        results3.forEach(({ dep_name }) => {
+                            choiceArray3.push(dep_name);
+                        });
+                        return choiceArray3;
+                    },
+                }
+            ])
+            .then(({ title, salary, departmentName }) => {
+                const filterDepartmentType = results3.filter(value => value.dep_name === departmentName)[0].id
+
+                roleDB.addRole(title, salary, filterDepartmentType).then((roleResults) => {
+                    roleDB.getAllRoles().then((roleResults) => {
+                        console.log("Successfully added role!!")
+                        console.table(roleResults);
+                        start();
+                    })
+
+                })
+            })
+    })
 }
 
 function department() {

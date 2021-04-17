@@ -7,8 +7,8 @@ class ConstructRole {
     getAllRoles() {
         return this.connection.query("SELECT * FROM roles")
     }
-    addRole(roleName, roleSalary) {
-        return this.connection.query("INSERT INTO roles (title, salary) VALUES (?, ?);", [roleName, roleSalary])
+    addRole(roleName, roleSalary, depId) {
+        return this.connection.query("INSERT INTO roles (title, salary, dep_id) VALUES (?, ?, ?);", [roleName, roleSalary, depId])
     }
 }
 
